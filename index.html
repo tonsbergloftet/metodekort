@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metodekort – Fra elevstemme til handling</title>
+<style>
+@font-face{font-family:"Kalam";font-weight:400;src:url(fonts/kalam-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Kalam";font-weight:700;src:url(fonts/kalam-latin-700-normal.woff2) format("woff2")}
+
+:root{--blekk:#14274A;--papir:#FCF6EC;--ui:#F1EEE8;--linje:#DDD6CA;--dempet:#6A7180}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ui);color:var(--blekk);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit;cursor:pointer}
+
+/* ---------- Verktøylinje ---------- */
+.verktoy{position:sticky;top:0;z-index:10;background:rgba(241,238,232,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--linje)}
+.verktoy .indre{max-width:1100px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.verktoy h1{font-size:15px;margin:0 auto 0 0;font-weight:700}
+.verktoy select{font:inherit;font-size:14px;padding:7px 10px;border-radius:99px;border:1.5px solid var(--linje);background:#fff;color:var(--blekk)}
+.verktoy label.valg{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--dempet)}
+.rad2{max-width:1100px;margin:0 auto;padding:0 20px 12px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.verktoy h1 small{display:block;font-weight:400;color:var(--dempet);font-size:13px}
+.knapp{border:0;border-radius:99px;padding:9px 16px;font-weight:700;background:var(--blekk);color:#fff;font-size:14px;white-space:nowrap}
+.knapp.sek{background:#fff;color:var(--blekk);box-shadow:inset 0 0 0 1.5px var(--linje)}
+.knapp:disabled{opacity:.5;cursor:wait}
+.status{max-width:1100px;margin:0 auto;padding:0 20px}
+.varsel{margin:14px 0 0;background:#FBE3DC;border-radius:12px;padding:10px 14px;font-size:14px}
+.varsel b{display:block}
+.info{margin:14px 0 0;background:#fff;border-radius:12px;padding:10px 14px;font-size:14px;color:var(--dempet)}
+
+/* ---------- Kortliste ---------- */
+.kortliste{max-width:1100px;margin:0 auto;padding:10px 20px 80px;display:flex;flex-direction:column;gap:34px}
+.kortrad .kortmeta{display:flex;align-items:center;gap:10px;margin:18px 0 8px}
+.kortrad .kortmeta span{font-weight:700;margin-right:auto}
+.skala{width:100%;position:relative}
+.skala > .kort{position:absolute;left:0;top:0;transform-origin:0 0;box-shadow:0 2px 14px rgba(20,39,74,.12);border-radius:6px}
+
+/* =========================================================
+   KORTET – 210 × 148 mm (A5 liggende) = 794 × 560 px ved 96 dpi
+   ========================================================= */
+.kort{width:794px;height:560px;position:relative;overflow:hidden;background-color:var(--papir);color:var(--blekk);font-family:Kalam,cursive;
+  background-image:url(assets/papir.png);}
+.kort img{position:absolute;display:block;mix-blend-mode:multiply;pointer-events:none;user-select:none}
+.felt{position:absolute;white-space:pre-wrap;overflow-wrap:break-word;outline:none;border-radius:4px}
+.redigerbar .felt:hover{box-shadow:0 0 0 1.5px rgba(62,147,207,.45)}
+.redigerbar .felt:focus{box-shadow:0 0 0 2px #3E93CF;background:rgba(255,255,255,.35)}
+.redigerbar .felt.for-lang{box-shadow:0 0 0 2px #D9534F;background:rgba(217,83,79,.07)}
+
+/* Metodekort */
+.nr{position:absolute;width:70px;text-align:center;font-weight:700;font-size:54px;line-height:1}
+.tittel{font-weight:700;font-size:46px;line-height:1.05;white-space:nowrap}
+.ingress{font-size:21px;line-height:1.36;letter-spacing:.035em}
+.etikett{position:absolute;display:inline-block}
+.etikett img{position:absolute;inset:0;width:100%;height:100%}
+.etikett .felt{position:relative;display:inline-block;font-weight:700;font-size:26px;line-height:1.1;padding:7px 20px 5px 18px;white-space:nowrap}
+.brodtekst{font-size:17px;line-height:1.34;letter-spacing:.028em}
+
+/* Forside */
+.f-tittel{font-weight:700;font-size:54px;line-height:1.02;transform:rotate(-6deg);transform-origin:0 50%}
+.f-under{font-size:19.5px;line-height:1.36;letter-spacing:.035em}
+.pille{position:absolute;display:flex;align-items:center;justify-content:center}
+.pille img{position:absolute;inset:0;width:100%;height:100%}
+.pille .felt{position:relative;text-align:center;font-size:18px;line-height:1.08;letter-spacing:.01em;padding:0 6px}
+.f-loop{font-size:21px !important;letter-spacing:.02em !important}
+/* Reisen */
+.r-pille .felt{font-size:24px !important}
+.r-tittel{font-size:66px !important}
+.r-under{font-size:22px !important}
+.r-loop{font-size:26px !important;line-height:1.15;text-align:center;letter-spacing:.02em}
+
+/* Verktøykassen */
+.v-tittel .felt{font-size:40px !important;padding:6px 26px 2px 22px !important}
+.v-etikett .felt{font-size:28px !important}
+.v-ingress{font-size:18px;line-height:1.34;letter-spacing:.035em}
+.v-maal{font-size:19px;line-height:1.34;letter-spacing:.035em}
+.v-opp{font-size:15.8px;line-height:1.3;letter-spacing:.03em}
+.v-fot{position:absolute}
+.v-fot img{position:absolute;inset:0;width:100%;height:100%}
+.krymp{white-space:nowrap !important}
+.v-fot-t{font-weight:700;font-size:18.5px;line-height:1.2;letter-spacing:.01em}
+.v-fot-u{font-size:13.2px;line-height:1.3;letter-spacing:.02em}
+
+/* Under eksport */
+.eksport .felt{box-shadow:none !important;background:none !important}
+.skala > .kort.eksport{border-radius:0;box-shadow:none}
+</style>
+</head>
+<body>
+
+<div class="verktoy"><div class="indre">
+  <h1>Metodekort – Fra elevstemme til handling<small>Klikk på en tekst for å endre den. Endringene lagres i nettleseren.</small></h1>
+  <label class="valg">Kortformat
+    <select id="format">
+      <option value="a6">A6 (14,8 × 10,5 cm)</option>
+      <option value="a5">A5 (21 × 14,8 cm)</option>
+      <option value="a4">A4 (29,7 × 21 cm)</option>
+      <option value="kort">Kort (12,5 × 7,5 cm)</option>
+    </select></label>
+  <label class="valg"><input type="checkbox" id="bleed"> 3 mm utfallende</label>
+  <button class="knapp" id="pdf">⬇ PDF (alle kort)</button>
+  <button class="knapp sek" id="ark" hidden>⬇ Utskriftsark (4 per A4)</button>
+  <button class="knapp sek" id="pngzip">⬇ PNG (zip)</button>
+  <button class="knapp sek" id="kopier">📋 Kopier tekst</button>
+  <button class="knapp sek" id="nullstill">↺ Tilbakestill</button>
+</div></div>
+<div class="status" id="status"></div>
+<div class="kortliste" id="kortliste"></div>
+
+<script src="lib/html-to-image.js"></script>
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="lib/jszip.min.js"></script>
+<script>
+/* =========================================================
+   INNHOLD
+   Teksten under er utgangspunktet. Endringer gjort på siden
+   lagres i nettleseren og legges oppå dette.
+   Nytt kort: legg til et objekt i KORT med type "metode",
+   og lag assets/sirkel-N.png og assets/illus-N.png.
+   ========================================================= */
+const KORT = [
+  { id:"forside", type:"forside", navn:"Forside",
+    tekst:{
+      tittel:"Fra elevstemme\ntil handling",
+      under:"En prosess for\nelevmedvirkning og\nsamskaping i skolen",
+      fase1:"Finn\ntema", fase2:"Klassene\nundersøker", fase3:"Elevrådet\nbehandler", fase4:"Elevråds-\nkonferansen", fase5:"Kobles til\npolitikk",
+      loop:"Sammen bygger vi videre"
+    } },
+  { id:"verktoy", type:"verktoy", navn:"Elevrådets verktøykasse",
+    tekst:{
+      tittel:"Elevrådets verktøykasse",
+      ingress:"Kortene hjelper dere å planlegge og gjennomføre medvirkningsprosesser i elevrådet, i klassen og på skolen.",
+      maalTittel:"Målet",
+      maal:"Å styrke skoledemokratiet og gi elevene verktøy til å delta aktivt, påvirke og skape forbedringer sammen med andre.",
+      oppTittel:"Oppdagerblikket – finn det som virker",
+      opp:"Når vi ønsker å forbedre noe, er det lett å begynne med å lete etter feil og problemer. Med oppdagerblikket gjør vi noe annet. Vi leter etter det som allerede fungerer, det som gir verdi, og det vi ønsker mer av.\n\nVi tar utfordringer på alvor, men bruker styrkene og de gode erfaringene våre til å finne nye muligheter. Når vi gjør dette sammen, kan vi skape løsninger som flere kjenner seg igjen i og ønsker å bidra til.",
+      fotTittel:"Verktøykassen bygger på Appreciative Inquiry (5D-modellen) –",
+      fot:"en styrkebasert tilnærming der vi utforsker det som fungerer, forestiller oss muligheter og utvikler løsninger sammen."
+    } },
+  { id:"kort1", type:"metode", nr:"1", sirkel:"assets/sirkel-1.png", illus:"assets/illus-1.png",
+    tekst:{
+      tittel:"Finn tema",
+      ingress:"Elevrådet løfter fram temaer og utfordringer fra skolehverdagen, og velger et felles tema å utforske.",
+      hvem:"Leder av elevrådet og elevrådskontakten (læreren som støtter elevrådet).",
+      hva:"Løfter fram erfaringer, utfordringer og muligheter. Velger et tema sammen.",
+      resultat:"Et felles tema som klassene skal utforske."
+    } },
+  { id:"kort2", type:"metode", nr:"2", sirkel:"assets/sirkel-2.png", illus:"assets/illus-2.png",
+    tekst:{
+      tittel:"Klassene undersøker",
+      ingress:"Klassene utforsker temaet på ulike måter, og samler erfaringer, ideer og perspektiver fra mange elever.",
+      hvem:"Alle klasser deltar. Elevrådsrepresentanten leder prosessen sammen med lærer.",
+      hva:"Utforsker temaet. Samler erfaringer, ideer og perspektiver. Kommer med anbefalinger til elevrådet.",
+      resultat:"Innsikt, innspill og anbefalinger som tas med videre til elevrådet og Elevrådskonferansen."
+    } },
+  { id:"kort3", type:"metode", nr:"3", sirkel:"assets/sirkel-3.png", illus:"assets/illus-3.png",
+    tekst:{
+      tittel:"Elevrådskonferansen",
+      ingress:"Elevene deler innsikt, utforsker muligheter og utvikler ideer sammen med politikere, rektorer og andre ansatte i kommunen.",
+      hvem:"Elevrådet fra alle skolene sammen med elevrådskontakter, rektorer, politikere og andre ansatte.",
+      hva:"Deler funn og innspill fra egen skole og samskaper mulige tiltak og løsninger.",
+      resultat:"Konkrete forslag som tar utgangspunkt i elevenes erfaringer og behov."
+    } },
+  { id:"kort4", type:"metode", nr:"4", sirkel:"assets/sirkel-4.png", illus:"assets/illus-4.png",
+    tekst:{
+      tittel:"Kobles til politikk",
+      ingress:"Innsikt og forslag tas videre til de som kan ta beslutninger og gjøre endringer.",
+      hvem:"Elevråd, skoleledelse og politikere.",
+      hva:"Presenterer innsikt og forslag, diskuterer videre arbeid og prioriterer tiltak.",
+      resultat:"Systematisk medvirkning fra barn og unge, fra individ- til systemnivå. Sikrer bedre opplyste politiske vedtak."
+    } }
+];
+KORT.push({ id:"reise", type:"reise", navn:"Reisen", tekst:{} });   // bruker teksten fra forsiden
+const ETIKETTER = { hvem:"Hvem deltar?", hva:"Hva gjør vi?", resultat:"Resultat" };
+const NOKKEL = "elevstemme-metodekort-v2";
+
+/* ---------- formater ---------- */
+const FORMATER = {
+  a6:   { navn:"A6", mm:[148,105], W:794 },
+  a5:   { navn:"A5", mm:[210,148], W:794 },
+  a4:   { navn:"A4", mm:[297,210], W:794 },
+  kort: { navn:"12,5 × 7,5 cm", mm:[125,75], W:933 }   // bredere format: oppsettet strekkes i bredden
+};
+const REISEFORMATER = { a4:{ navn:"A4", mm:[210,297] }, a3:{ navn:"A3", mm:[297,420] } };
+let valgtFormat = "a5", valgtReise = "a4";
+try { valgtFormat = localStorage.getItem(NOKKEL + "-format") || "a5"; valgtReise = localStorage.getItem(NOKKEL + "-reise") || "a4"; } catch(e){}
+if (!FORMATER[valgtFormat]) valgtFormat = "a5";
+let W = FORMATER[valgtFormat].W;
+const dims = k => k.type === "reise" ? { w:794, h:1123, mm:REISEFORMATER[valgtReise].mm } : { w:W, h:560, mm:FORMATER[valgtFormat].mm };
+
+/* ---------- lagring ---------- */
+let endret = {};
+try { endret = JSON.parse(localStorage.getItem(NOKKEL)) || {}; } catch(e){}
+const lagre = () => { try { localStorage.setItem(NOKKEL, JSON.stringify(endret)); } catch(e){} };
+const tekst = (k, f) => (endret[k.id] && endret[k.id][f] != null) ? endret[k.id][f] : k.tekst[f];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- byggeklosser ---------- */
+const px = v => v + "px";
+function bilde(src, x, y, w, h){ return `<img src="${src}" alt="" style="left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)}">`; }
+function felt(k, f, cls, stil){ return `<div class="felt ${cls}" data-kort="${k.id}" data-felt="${f}" style="${stil}">${esc(tekst(k,f))}</div>`; }
+
+/* ---------- forside ----------
+   Plassering regnes om fra koordinatene i det godkjente bildet. */
+function forsideHTML(k){
+  /* Fem faser: pillene fordeles jevnt, prikkene står midt over sin pille, pilene midt mellom prikkene */
+  const S = 0.46;
+  const faser = [
+    { f:"fase1", pille:"f-pille-gul",    prikk:"p-gul",    pw:96,  w:122, h:133 },
+    { f:"fase2", pille:"f-pille-bla",    prikk:"p-bla",    pw:132, w:260, h:279 },
+    { f:"fase3", pille:"f-pille-lilla",  prikk:"p-lilla",  pw:132, w:192*0.74, h:206*0.74 },
+    { f:"fase4", pille:"f-pille-korall", prikk:"p-korall", pw:142, w:279, h:290 },
+    { f:"fase5", pille:"f-pille-gronn",  prikk:"p-kule",   pw:124, w:202, h:260, kule:true }
+  ];
+  const d = W - 794, venstre = 30, hoyre = 764 + d, midtY = 292, pilleTopp = 372, pilleH = 62;
+  const gap = (hoyre - venstre - faser.reduce((a, x) => a + x.pw, 0)) / (faser.length - 1);
+  let x = venstre;
+  faser.forEach(p => { p.cx = x + p.pw / 2; x += p.pw + gap; p.ww = p.w * S; p.hh = p.h * S; });
+  let html = "";
+  faser.forEach((p, i) => {
+    const top = p.kule ? midtY - p.hh * 0.62 : midtY - p.hh / 2;   // kula har stråler over seg
+    html += bilde(`assets/${p.prikk}.png`, p.cx - p.ww / 2, top, p.ww, p.hh);
+    html += `<div class="pille" style="left:${px(p.cx - p.pw / 2)};top:${px(pilleTopp)};width:${px(p.pw)};height:${px(pilleH)}">
+               <img src="assets/${p.pille}.png" alt="">${felt(k, p.f, "", "")}</div>`;
+    if (i < faser.length - 1) {
+      const n = faser[i + 1], a = p.cx + p.ww / 2, b = n.cx - n.ww / 2, pw = 49 * S, ph = 37 * S;
+      html += bilde("assets/p-pil.png", (a + b) / 2 - pw / 2, midtY + (n.kule ? 4 : 0) - ph / 2, pw, ph);
+    }
+  });
+  const c1 = faser[0].cx, c5 = faser[4].cx;
+  return `
+    ${bilde("assets/f-prikker-korall.png", 712 + d, 16, 66, 62)}
+    ${bilde("assets/f-prikker-bla.png", 14, 494, 52, 52)}
+    ${bilde("assets/f-straler.png", 26, 30, 66, 100)}
+    ${felt(k, "tittel", "f-tittel", "left:72px;top:52px;width:420px;height:122px")}
+    ${bilde("assets/f-understrek.png", 168, 146, 236, 29)}
+    ${felt(k, "under", "f-under", `left:${486 + d * 0.7}px;top:90px;width:240px;height:84px`)}
+    ${html}
+    ${bilde("assets/f-pil-v.png", c1 - 12, 448, 235 * S, 110 * S)}
+    <div class="pille" style="left:${px(c1 + 104)};top:${px(470)};width:${px(c5 - c1 - 208)};height:${px(58)}">
+      <img src="assets/f-pille-oliven.png" alt="">${felt(k, "loop", "f-loop", "")}</div>
+    ${bilde("assets/f-pil-h.png", c5 - 258 * S + 12, 448, 258 * S, 114 * S)}`;
+}
+
+/* ---------- metodekort ---------- */
+function metodeHTML(k){
+  const d = W - 794, h = d / 2;   // ekstra bredde (12,5 × 7,5 cm): halvparten til venstre spalte, høyre spalte skyves ut
+  const seksjon = (f, blob, top) => `
+    <div class="etikett" style="left:${px(512 + d)};top:${px(top)}"><img src="assets/${blob}.png" alt="">
+      <div class="felt" style="position:relative">${esc(ETIKETTER[f])}</div></div>
+    ${felt(k, f, "brodtekst", `left:${px(524 + d)};top:${px(top+54)};width:246px;height:98px`)}`;
+  return `
+    ${bilde(k.sirkel, 22, 14, 116, 119)}
+    ${felt(k, "tittel", "tittel", `left:140px;top:42px;width:${px(330 + h)};height:56px`)}
+    ${bilde("assets/understrek.png", 132, 98, 312 + h * 0.5, 30)}
+    ${felt(k, "ingress", "ingress", `left:34px;top:140px;width:${px(430 + h)};height:110px`)}
+    <img class="illus" src="${k.illus}" alt="" style="left:18px;top:252px;width:458px;height:264px">
+    ${bilde("assets/vlinje.png", 482 + h, 26, 18, 510)}
+    ${seksjon("hvem", "blob-gul", 26)}
+    ${bilde("assets/hlinje.png", 510 + d, 184, 268, 16)}
+    ${seksjon("hva", "blob-bla", 200)}
+    ${bilde("assets/hlinje.png", 510 + d, 358, 268, 16)}
+    ${seksjon("resultat", "blob-korall", 374)}
+    ${bilde("assets/hlinje-gul.png", 512 + d, 520, 262, 16)}`;
+}
+/* Etikettene («Hvem deltar?» osv.) er låst i denne versjonen. */
+
+/* ---------- verktøykassen (introkort) ---------- */
+function verktoyHTML(k){
+  const d = W - 794;
+  const etikett = (f, blob, x, y, maks, cls) => `
+    <div class="etikett ${cls}" data-maks="${maks}" style="left:${px(x)};top:${px(y)}"><img src="assets/${blob}.png" alt="">
+      ${felt(k, f, "", "position:relative")}</div>`;
+  return `
+    ${bilde("assets/v-straler.png", 12, 10, 40, 45)}
+    ${etikett("tittel", "v-blob-tittel", 40, 14, 520, "v-tittel")}
+    ${felt(k, "ingress", "v-ingress", `left:50px;top:72px;width:${px(500 + d * 0.6)};height:50px`)}
+    ${bilde("assets/v-hlinje-kort.png", 24, 128, 530 + d, 11)}
+    ${etikett("maalTittel", "v-blob-bla", 34, 142, 500, "v-etikett")}
+    ${felt(k, "maal", "v-maal", `left:50px;top:188px;width:${px(470 + d * 0.6)};height:76px`)}
+    <img class="v-illus" src="assets/v-illus.png" alt="" style="left:${px(566 + d)};top:22px;width:206px;height:200px">
+    ${bilde("assets/v-hlinje.png", 20, 272, 756 + d, 10)}
+    ${etikett("oppTittel", "v-blob-korall", 30, 286, 740, "v-etikett")}
+    ${felt(k, "opp", "v-opp", `left:46px;top:330px;width:${px(726 + d)};height:146px`)}
+    ${bilde("assets/v-hlinje-3.png", 20, 478, 756 + d, 10)}
+    ${bilde("assets/v-straler-gronn.png", 22, 488, 30, 38)}
+    <div class="v-fot" style="left:46px;top:492px;width:${px(728 + d)};height:60px"><img src="assets/v-blob-fot.png" alt="">
+      ${felt(k, "fotTittel", "v-fot-t krymp", `left:24px;top:8px;width:${px(684 + d)};height:24px`)}
+      ${felt(k, "fot", "v-fot-u krymp", `left:24px;top:32px;width:${px(690 + d)};height:20px`)}
+    </div>`;
+}
+
+/* ---------- reisen (A4-plakat, stående) ----------
+   Stien er tegnet på forhånd (assets/r-sti.png) gjennom fem stopp.
+   Teksten hentes fra forsiden, så endringer der vises også her. */
+function reiseHTML(){
+  const k = KORT.find(x => x.id === "forside");
+  const stopp = [
+    { f:"fase1", x:632, y:372, prikk:"p-gul",    w:122, h:133, s:0.55, pille:"f-pille-gul",    side:"h" },
+    { f:"fase2", x:172, y:505, prikk:"p-bla",    w:260, h:279, s:0.50, pille:"f-pille-bla",    side:"v" },
+    { f:"fase3", x:632, y:625, prikk:"p-lilla",  w:192, h:206, s:0.40, pille:"f-pille-lilla",  side:"h" },
+    { f:"fase4", x:175, y:760, prikk:"p-korall", w:279, h:290, s:0.50, pille:"f-pille-korall", side:"v" },
+    { f:"fase5", x:625, y:895, prikk:"p-kule",   w:202, h:260, s:0.50, pille:"f-pille-gronn",  side:"h", kule:true }
+  ];
+  const PW = 214, PH = 78;
+  let html = "";
+  stopp.forEach(p => {
+    const w = p.w * p.s, h = p.h * p.s, top = p.kule ? p.y - h * 0.62 : p.y - h / 2;
+    html += bilde(`assets/${p.prikk}.png`, p.x - w / 2, top, w, h);
+    const r = (p.kule ? 52 : w / 2) + 16, left = p.side === "h" ? p.x - r - PW : p.x + r;
+    html += `<div class="pille r-pille" style="left:${px(left)};top:${px(p.y - PH / 2)};width:${px(PW)};height:${px(PH)}">
+               <img src="assets/${p.pille}.png" alt="">${felt(k, p.f, "", "")}</div>`;
+  });
+  return `
+    ${bilde("assets/r-sti.png", 0, 0, 794, 1123)}
+    ${bilde("assets/f-straler.png", 22, 50, 80, 122)}
+    ${felt(k, "tittel", "f-tittel r-tittel", "left:80px;top:72px;width:470px;height:150px")}
+    ${bilde("assets/f-understrek.png", 190, 192, 290, 36)}
+    ${felt(k, "under", "f-under r-under", "left:84px;top:252px;width:330px;height:100px")}
+    ${bilde("assets/r-flagg.png", 548, 92, 194, 176)}
+    ${html}
+    ${bilde("assets/r-sky.png", 177, 975, 440, 122)}
+    <div class="pille" style="left:240px;top:992px;width:314px;height:96px">
+      <div class="felt r-loop" data-kort="forside" data-felt="loop" data-linjer="2">${esc(tekst(k, "loop"))}</div></div>
+    ${bilde("assets/f-prikker-korall.png", 690, 1030, 66, 62)}
+    ${bilde("assets/f-prikker-bla.png", 26, 1046, 52, 52)}`;
+}
+
+/* Plasser illustrasjonen på metodekortene midt i plassen som er igjen under innledningen */
+function plasserIllus(kort){
+  const img = kort.querySelector("img.illus"), ing = kort.querySelector(".ingress"); if (!img || !ing) return;
+  const r = document.createRange(); r.selectNodeContents(ing);
+  const rects = [...r.getClientRects()].filter(x => x.width > 0);
+  const skala = kort.getBoundingClientRect().height / 560 || 1;
+  const tekstBunn = rects.length ? (Math.max(...rects.map(x => x.bottom)) - kort.getBoundingClientRect().top) / skala : 140;
+  const topp = Math.max(tekstBunn + 18, 200), bunn = 536, venstre = 16, hoyre = 478 + (W - 794) / 2;
+  const ratio = 712 / 410;
+  let w = hoyre - venstre, h = w / ratio;
+  if (h > bunn - topp) { h = bunn - topp; w = h * ratio; }
+  img.style.width = px(w); img.style.height = px(h);
+  img.style.left = px(venstre + (hoyre - venstre - w) / 2);
+  img.style.top = px(topp + (bunn - topp - h) / 2);
+}
+
+/* ---------- tegning ---------- */
+const liste = document.getElementById("kortliste");
+const metaNavn = k => k.type==="forside" ? "Forside" : k.type==="reise" ? "Reisen – plakat" : k.type==="verktoy" ? "Introkort – " + tekst(k,"tittel") : "Kort " + k.nr + " – " + tekst(k,"tittel");
+const kortNavn = k => k.type==="forside" ? "Forsiden" : k.type==="reise" ? "Reisen" : k.type==="verktoy" ? "Introkortet" : "Kort " + k.nr;
+function tegnAlle(){
+  W = FORMATER[valgtFormat].W;
+  liste.innerHTML = KORT.map((k,i) => {
+    const m = dims(k);
+    const knapper = k.type === "reise"
+      ? `<select data-reiseformat>${Object.entries(REISEFORMATER).map(([v,f]) => `<option value="${v}" ${v===valgtReise?"selected":""}>${f.navn}</option>`).join("")}</select>
+         <button class="knapp sek" data-png="${i}">⬇ PNG</button><button class="knapp" data-pdf="${i}">⬇ PDF</button>`
+      : `<button class="knapp sek" data-png="${i}">⬇ PNG</button>`;
+    return `
+    <div class="kortrad">
+      <div class="kortmeta"><span>${esc(metaNavn(k))}</span>${knapper}</div>
+      <div class="skala"><div class="kort redigerbar" id="kort-${k.id}" data-navn="${esc(kortNavn(k))}" style="width:${m.w}px;height:${m.h}px">${
+        k.type==="forside" ? forsideHTML(k) : k.type==="verktoy" ? verktoyHTML(k) : k.type==="reise" ? reiseHTML() : metodeHTML(k)}</div></div>
+    </div>`; }).join("");
+  liste.querySelectorAll(".felt[data-felt]").forEach(el => {
+    el.contentEditable = "plaintext-only";
+    if (el.contentEditable !== "plaintext-only") el.contentEditable = "true";
+    el.spellcheck = true;
+    el.addEventListener("input", () => {
+      const k = el.dataset.kort, f = el.dataset.felt;
+      (endret[k] = endret[k] || {})[f] = el.innerText.replace(/\n$/, "");
+      lagre(); tilpass(el);
+      liste.querySelectorAll(`.felt[data-kort="${k}"][data-felt="${f}"]`).forEach(x => { if (x !== el) { x.textContent = endret[k][f]; tilpass(x); } });
+      sjekk();
+      if (f === "tittel") el.closest(".kortrad").querySelector(".kortmeta span").textContent = metaNavn(KORT.find(x=>x.id===k));
+      if (f === "ingress") plasserIllus(el.closest(".kort"));
+    });
+    el.addEventListener("paste", e => { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData||window.clipboardData).getData("text/plain")); });
+    el.addEventListener("keydown", e => { if (e.key === "Enter" && (el.classList.contains("tittel") || el.closest(".etikett") || el.classList.contains("v-fot-t") || el.classList.contains("v-fot-u"))) e.preventDefault(); });
+  });
+  liste.querySelectorAll("[data-png]").forEach(b => b.onclick = () => lastNedPNG(+b.dataset.png, b));
+  liste.querySelectorAll("[data-pdf]").forEach(b => b.onclick = () => travel(b, async () => lagPDF([+b.dataset.pdf], "reisen-" + REISEFORMATER[valgtReise].navn.toLowerCase())));
+  liste.querySelectorAll("[data-reiseformat]").forEach(sel => sel.onchange = () => { valgtReise = sel.value; try { localStorage.setItem(NOKKEL + "-reise", valgtReise); } catch(e){} });
+  skaler(); document.fonts.ready.then(() => { liste.querySelectorAll(".felt").forEach(tilpass); liste.querySelectorAll(".kort").forEach(plasserIllus); sjekk(); });
+}
+
+/* Titler og bunntekst krymper litt hvis de er for lange for linjen (ned til 70 %).
+   Skriften måles litt ulikt i ulike nettlesere (f.eks. Safari på iPhone), så dette gir slingringsmonn. */
+function tilpass(el){
+  if (!el.classList.contains("tittel") && !el.classList.contains("krymp")) return;
+  el.style.fontSize = "";
+  const maks = parseFloat(getComputedStyle(el).fontSize);
+  let s = maks;
+  while (el.scrollWidth > el.clientWidth + 1 && s > maks * 0.7) { s -= 1; el.style.fontSize = s + "px"; }
+}
+
+/* Marker felt der teksten ikke får plass: teller linjer i stedet for piksler */
+const MAKS_LINJER = { tittel:1, ingress:4, hvem:4, hva:4, resultat:4, under:3, fase1:2, fase2:2, fase3:2, fase4:2, fase5:2, loop:1 };
+const MAKS_LINJER_FORSIDE = { tittel:2 };
+const MAKS_LINJER_VERKTOY = { tittel:1, ingress:2, maalTittel:1, maal:3, oppTittel:1, opp:7, fotTittel:1, fot:1 };
+const FELTNAVN = {tittel:"tittel",ingress:"innledning",hvem:"«Hvem deltar?»",hva:"«Hva gjør vi?»",resultat:"«Resultat»",under:"undertittel",loop:"«Hvert år …»",
+  maalTittel:"overskrift «Målet»",maal:"målteksten",oppTittel:"overskrift «Oppdagerblikket»",opp:"oppdagerteksten",fotTittel:"bunntekst (linje 1)",fot:"bunntekst (linje 2)"};
+function antallLinjer(el){
+  const r = document.createRange(); r.selectNodeContents(el);
+  const tops = [...r.getClientRects()].filter(x => x.width > 0).map(x => x.top).sort((a,b) => a-b);
+  const lh = parseFloat(getComputedStyle(el).fontSize) * 0.6 * (el.getBoundingClientRect().height / el.offsetHeight || 1);
+  let n = 0, sist = -1e9; tops.forEach(t => { if (t - sist > lh) { n++; sist = t; } });
+  return n;
+}
+function sjekk(){
+  const feil = [];
+  liste.querySelectorAll(".felt[data-felt]").forEach(el => {
+    const k = KORT.find(x => x.id === el.dataset.kort), f = el.dataset.felt;
+    const maks = +el.dataset.linjer || (k.type === "forside" && MAKS_LINJER_FORSIDE[f]) || (k.type === "verktoy" && MAKS_LINJER_VERKTOY[f]) || MAKS_LINJER[f] || 3;
+    let lang = antallLinjer(el) > maks;
+    const fs = parseFloat(getComputedStyle(el).fontSize);
+    if (!el.closest(".etikett") && !el.closest(".pille") && el.style.height && el.scrollHeight > el.clientHeight + fs * 0.6) lang = true;
+    const et = el.closest(".etikett[data-maks]"); if (et && et.offsetWidth > +et.dataset.maks) lang = true;
+    if ((el.classList.contains("tittel") || el.classList.contains("krymp")) && el.scrollWidth > el.clientWidth + 1) lang = true;
+    const p = el.closest(".pille"); if (p && el.offsetWidth > p.clientWidth + 4) lang = true;
+    el.classList.toggle("for-lang", lang);
+    if (lang) feil.push(el.closest(".kort").dataset.navn + ": " + (FELTNAVN[f] || "fasenavn") + ` (maks ${maks} linje${maks>1?"r":""})`);
+  });
+  document.getElementById("status").innerHTML = feil.length
+    ? `<div class="varsel"><b>Teksten er for lang i ${feil.length === 1 ? "ett felt" : feil.length + " felt"} (markert med rødt):</b>${feil.map(esc).join(" · ")}</div>` : "";
+  return feil.length;
+}
+
+function skaler(){
+  liste.querySelectorAll(".skala").forEach(s => {
+    const k = s.firstElementChild, bw = k.offsetWidth, bh = k.offsetHeight;
+    const maksB = bh > bw ? Math.min(s.clientWidth, 620) : s.clientWidth;   // plakaten vises litt mindre
+    const f = Math.min(1.3, maksB / bw);
+    k.style.transform = `scale(${f})`; s.style.height = (bh * f) + "px";
+  });
+}
+addEventListener("resize", () => { skaler(); liste.querySelectorAll(".kort").forEach(plasserIllus); });
+
+/* ---------- eksport ---------- */
+const DPI = 300, MAKS_PIKSLER = 16e6;   // iPhone tåler ikke større lerret enn ca. 16,7 MP
+function piksler(k){
+  const m = dims(k); let r = (m.mm[0] / 25.4 * DPI) / m.w;
+  if (m.w * r * m.h * r > MAKS_PIKSLER) r = Math.sqrt(MAKS_PIKSLER / (m.w * m.h));
+  return r;
+}
+async function tilBilde(i, type="png"){
+  const k = KORT[i], m = dims(k), el = document.getElementById("kort-" + k.id);
+  document.activeElement && document.activeElement.blur();
+  el.classList.add("eksport"); el.classList.remove("redigerbar");
+  const gammel = el.style.transform; el.style.transform = "none";
+  try {
+    const opt = { pixelRatio: piksler(k), width:m.w, height:m.h, cacheBust:false };
+    return type === "jpeg" ? await htmlToImage.toJpeg(el, {...opt, quality:0.93, backgroundColor:"#FCF6EC"}) : await htmlToImage.toPng(el, opt);
+  } finally { el.style.transform = gammel; el.classList.remove("eksport"); el.classList.add("redigerbar"); }
+}
+const lastBilde = src => new Promise((ok, feil) => { const im = new Image(); im.onload = () => ok(im); im.onerror = feil; im.src = src; });
+/* Legger på 3 mm utfallende papirbakgrunn rundt kortet (til trykkeri) */
+async function medUtfall(i, dataUrl){
+  const k = KORT[i], m = dims(k), r = piksler(k), kort = await lastBilde(dataUrl);
+  const b = Math.round(3 / m.mm[0] * kort.width);
+  const c = document.createElement("canvas"); c.width = kort.width + 2 * b; c.height = kort.height + 2 * b;
+  const g = c.getContext("2d"); g.fillStyle = "#FCF6EC"; g.fillRect(0, 0, c.width, c.height);
+  try { const pat = g.createPattern(await lastBilde("assets/papir.png"), "repeat"); pat.setTransform(new DOMMatrix().scale(r)); g.fillStyle = pat; g.fillRect(0, 0, c.width, c.height); } catch(e){}
+  g.drawImage(kort, b, b);
+  return c.toDataURL("image/jpeg", 0.93);
+}
+async function lagPDF(indekser, navn){
+  const bleed = document.getElementById("bleed").checked ? 3 : 0;
+  let pdf = null;
+  for (const i of indekser) {
+    const m = dims(KORT[i]), bw = m.mm[0] + 2 * bleed, bh = m.mm[1] + 2 * bleed;
+    const orient = bw > bh ? "landscape" : "portrait";
+    if (!pdf) pdf = new jspdf.jsPDF({ orientation:orient, unit:"mm", format:[bw, bh] });
+    else pdf.addPage([bw, bh], orient);
+    const bilde = bleed ? await medUtfall(i, await tilBilde(i)) : await tilBilde(i, "jpeg");
+    pdf.addImage(bilde, "JPEG", 0, 0, bw, bh);
+  }
+  await last(pdf.output("blob"), navn + (bleed ? "-utfallende" : "") + ".pdf");
+}
+/* 12,5 × 7,5 cm: fire kort per liggende A4 med skjæremerker, til vanlig skriver */
+async function lagUtskriftsark(){
+  const kort = KORT.map((k,i) => i).filter(i => KORT[i].type !== "reise");
+  const pdf = new jspdf.jsPDF({ orientation:"landscape", unit:"mm", format:"a4" });
+  const [kw, kh] = FORMATER.kort.mm, x0 = (297 - 2 * kw) / 2, y0 = (210 - 2 * kh) / 2;
+  for (let n = 0; n < kort.length; n++) {
+    const pos = n % 4; if (n && pos === 0) pdf.addPage("a4", "landscape");
+    const x = x0 + (pos % 2) * kw, y = y0 + Math.floor(pos / 2) * kh;
+    pdf.addImage(await tilBilde(kort[n], "jpeg"), "JPEG", x, y, kw, kh);
+    if (pos === 3 || n === kort.length - 1) tegnMerker(pdf, x0, y0, kw, kh);
+  }
+  await last(pdf.output("blob"), "metodekort-12x7-utskriftsark.pdf");
+}
+function tegnMerker(pdf, x0, y0, kw, kh){
+  pdf.setDrawColor(60); pdf.setLineWidth(0.2);
+  const L = 6, G = 2, xs = [x0, x0 + kw, x0 + 2 * kw], ys = [y0, y0 + kh, y0 + 2 * kh];
+  xs.forEach(x => { pdf.line(x, y0 - G - L, x, y0 - G); pdf.line(x, ys[2] + G, x, ys[2] + G + L); });
+  ys.forEach(y => { pdf.line(x0 - G - L, y, x0 - G, y); pdf.line(xs[2] + G, y, xs[2] + G + L, y); });
+}
+function filnavn(i){ const k = KORT[i]; return (String(i).padStart(2,"0") + "-" + (k.type==="forside" ? "forside" : k.type==="reise" ? "reisen-" + REISEFORMATER[valgtReise].navn : tekst(k,"tittel") + "-" + FORMATER[valgtFormat].navn)).toLowerCase().replace(/æ/g,"ae").replace(/ø/g,"o").replace(/å/g,"a").replace(/[^a-z0-9]+/g,"-").replace(/-+$/,""); }
+/* Nedlasting: i Claude-artifakt via plattformens nedlasting, ellers vanlig lenke (GitHub Pages) */
+let DL = null;
+try { if (window.claude && window.claude.use) window.claude.use("downloads").then(d => { DL = d; }).catch(() => {}); } catch(e){}
+async function last(blob, navn){
+  if (DL) {
+    try { await DL.save({ filename:navn, data:blob }); }
+    catch(e){ if (e && e.code !== "declined") visInfo("Nedlastingen ble stoppet (" + (e.code || e.message) + ")."); }
+    return;
+  }
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = navn; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+const tilBlob = async dataUrl => (await fetch(dataUrl)).blob();
+async function travel(knapp, fn){
+  const t = knapp.textContent; knapp.disabled = true; knapp.textContent = "Lager …";
+  try { if (sjekk() && !confirmLang()) return; await fn(); }
+  catch(e){ console.error(e); visInfo("Noe gikk galt under eksporten: " + e.message); }
+  finally { knapp.disabled = false; knapp.textContent = t; }
+}
+function confirmLang(){ visInfo("Obs: noe tekst er for lang og blir kuttet eller går utenfor. Filene ble laget likevel."); return true; }
+function visInfo(m){ const s = document.getElementById("status"); s.insertAdjacentHTML("beforeend", `<div class="info">${esc(m)}</div>`); setTimeout(() => sjekk(), 6000); }
+
+async function lastNedPNG(i, knapp){ await travel(knapp, async () => last(await tilBlob(await tilBilde(i)), filnavn(i) + ".png")); }
+const kortIndekser = () => KORT.map((k,i) => i).filter(i => KORT[i].type !== "reise");
+document.getElementById("pdf").onclick = e => travel(e.currentTarget, () => lagPDF(kortIndekser(), "metodekort-" + FORMATER[valgtFormat].navn.toLowerCase().replace(/[^a-z0-9]+/g,"x")));
+document.getElementById("ark").onclick = e => travel(e.currentTarget, lagUtskriftsark);
+const formatSel = document.getElementById("format");
+formatSel.value = valgtFormat;
+const visArk = () => document.getElementById("ark").hidden = valgtFormat !== "kort";
+visArk();
+formatSel.onchange = () => { valgtFormat = formatSel.value; try { localStorage.setItem(NOKKEL + "-format", valgtFormat); } catch(e){} visArk(); tegnAlle(); };
+document.getElementById("pngzip").onclick = e => travel(e.currentTarget, async () => {
+  const zip = new JSZip();
+  for (let i = 0; i < KORT.length; i++) zip.file(filnavn(i) + ".png", (await tilBilde(i)).split(",")[1], { base64:true });
+  await last(await zip.generateAsync({ type:"blob" }), "metodekort-elevstemme-png.zip");
+});
+document.getElementById("kopier").onclick = async e => {
+  let t = "";
+  KORT.forEach(k => {
+    t += metaNavn(k).toUpperCase() + "\n";
+    Object.keys(k.tekst).forEach(f => t += `${f}: ${tekst(k,f).replace(/\n/g," / ")}\n`);
+    t += "\n";
+  });
+  try { await navigator.clipboard.writeText(t); e.currentTarget.textContent = "✔ Kopiert"; }
+  catch(err){ visInfo("Kunne ikke kopiere automatisk."); }
+};
+document.getElementById("nullstill").onclick = e => {
+  const b = e.currentTarget;
+  if (!b.dataset.sikker) { b.dataset.sikker = 1; b.textContent = "Sikker? Trykk igjen"; setTimeout(() => { b.textContent = "↺ Tilbakestill"; delete b.dataset.sikker; }, 3000); return; }
+  endret = {}; lagre(); delete b.dataset.sikker; b.textContent = "↺ Tilbakestill"; tegnAlle();
+};
+
+tegnAlle();
+</script>
+</body>
+</html>
